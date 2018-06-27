@@ -176,7 +176,11 @@ function parseOverview(text){
 
 function parseCodeLine(line){
   let arr = line.split("{")[0].split(/\s+/);
-  let signature = {};
+  let signature = {
+    type : "",
+    name : "",
+    isStatic : false
+  };
   if(line.indexOf("(") > -1){
     signature.type = "function";
   }
@@ -274,13 +278,18 @@ returns Object with the following structure:
     - types
     - desc
   - return
-
-all of the keys can be undefined
 */
 function parseContent(text){
   let lines = text.split("\n");
   let initalSpaces;
-  let info = {};
+  let info = {
+    type : "",
+    desc : "",
+    code : "",
+    params : [],
+    props : [],
+    return : []
+  };
   let descriptionOpen = false;
   let codeOpen = false;
   let description = "";
