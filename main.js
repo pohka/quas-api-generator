@@ -96,7 +96,12 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
 
   }//end of loop
 
-  console.log(docs);
+  fs.writeFile("./output.json", JSON.stringify(docs), function(err) {
+    if(err) {
+        return console.log(err);
+    }
+    console.log("Documentation generated!");
+  });
 });
 
 function parseCodeLine(line){
@@ -234,8 +239,9 @@ function parseContent(text){
       }
 
       //parameter
-      else if(trimmedLine.indexOf("@param") == 0){
+      else if(trimmedLine.indexOf("@param") == 0 || trimmedLine.indexOf("@prop") == 0){
         //find the description of the param
+        let key = trimmedLine.split(/\s+/)[0].slice(1) + "s"; //params or props
         let els = trimmedLine.split("-");
         let paramInfo = {};
         if(els.length > 1){
@@ -246,13 +252,11 @@ function parseContent(text){
         if(match){
           let paramType = match[0].substr(1,match[0].length-2);
           paramInfo.types = paramType.split("|");
-        }
 
-        if(paramInfo.type){
-          if(!info.params){
-            info.params = [];
+          if(!info[key]){
+            info[key] = [];
           }
-          info.params.push(paramInfo);
+          info[key].push(paramInfo);
         }
       }
 
