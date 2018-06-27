@@ -1,6 +1,10 @@
 const fs = require('fs');
 
 let folder = "./docs/";
+let args = process.argv.slice(2);
+if(args[0]){
+  folder = args[0];
+}
 let allDocs;
 let fileCount = 0;
 console.log("--------------------------");
@@ -87,11 +91,13 @@ function parse(filename){
                 inClassScope = true;
                 reachedFirstBracket = false;
                 currentClass = res;
+                delete currentClass.params;
                 currentClass.funcs = [];
                 bracketCount = 0;
               }
 
               else if(res.type == "function"){
+                delete res.props;
                 //add if just a stray function
                 if(!inClassScope){
                   docs.push(res);
