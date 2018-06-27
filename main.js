@@ -16,6 +16,7 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
   let bracketCount = 0;
   let reachedFirstBracket = false;
   let currentClass;
+  let all = {};
 
   for(let i=0; i<lines.length; i++){
     if(lines[i].indexOf("/**") > -1){
@@ -23,6 +24,9 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
     }
     else if(opened && lines[i].indexOf("*/") > -1){
       let res = parseContent(content);
+      if(res.type && res.type == "overview"){
+        all = parseOverview(content);
+      }
       if(Object.keys(res).length > 0){
         if(!res.type || res.type != "overview"){
           //find the next line that is not empty
@@ -101,13 +105,28 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
 
   }//end of loop
 
-  fs.writeFile("./output.json", JSON.stringify(docs), function(err) {
+  all.docs = docs;
+  fs.writeFile("./output.json", JSON.stringify(all), function(err) {
     if(err) {
         return console.log(err);
     }
     console.log("Documentation generated!");
   });
 });
+
+function parseOverview(text){
+  let obj = {};
+  let lines = text.split("\n");
+  for(let i=0; i<lines.length; i++){
+    let index = lines[i].indexOf(":");
+    if(index > -1){
+      let key = lines[i].substr(0,index).trim();
+      let val = lines[i].slice(index+1).trim();
+      obj[key] = val;
+    }
+  }
+  return obj;
+}
 
 function parseCodeLine(line){
   let arr = line.split("{")[0].split(/\s+/);
