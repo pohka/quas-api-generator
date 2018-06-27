@@ -130,7 +130,6 @@ node main
 Install Node.js
 
 ## Todo
-* return needs to be an array
 * (optional) params
 * (exclude) params
 * ignore

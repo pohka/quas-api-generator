@@ -354,7 +354,8 @@ function parseContent(text){
       else if(trimmedLine.indexOf("@return") == 0){
         let match = trimmedLine.match(/\{.*?\}/);
         let returnType = match[0].substr(1,match[0].length-2);
-        info.return = returnType;
+        let returnArr = returnType.split("|");
+        info.return = returnArr;
       }
 
       //start or end of description block
