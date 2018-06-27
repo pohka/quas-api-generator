@@ -334,6 +334,9 @@ function parseContent(text){
         if(els.length > 1){
           paramInfo.desc = els[1];
         }
+
+        let rightSide = trimmedLine.split("}")[1];
+        paramInfo.name = rightSide.split("-")[0].trim();
         //find the param type
         let match = trimmedLine.match(/\{.*?\}/);
         if(match){
