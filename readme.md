@@ -130,7 +130,5 @@ node main
 Install Node.js
 
 ## Todo
-* (optional) params
-* (exclude) params
-* ignore
+* ignore comments
 * modules markdown

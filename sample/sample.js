@@ -9,7 +9,7 @@
   Super class for all components
   ---
 
-  @prop {Object} props - All the properties for this component
+  @prop {Object} props - (exclude) All the properties for this component
   @prop {Boolean} isPure - If true the component won't update once mounted
 */
 

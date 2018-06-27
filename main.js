@@ -93,6 +93,7 @@ function parse(filename){
                 currentClass = res;
                 delete currentClass.params;
                 delete currentClass.isStatic;
+                delete currentClass.return;
                 currentClass.funcs = [];
                 bracketCount = 0;
               }
@@ -283,8 +284,7 @@ returns Object with the following structure:
   - desc
   - code
   - params
-    - types
-    - desc
+  - props
   - return
 */
 function parseContent(text){
@@ -327,26 +327,44 @@ function parseContent(text){
 
       //parameter
       else if(trimmedLine.indexOf("@param") == 0 || trimmedLine.indexOf("@prop") == 0){
+        let exclude = false;
         //find the description of the param
         let key = trimmedLine.split(/\s+/)[0].slice(1) + "s"; //params or props
         let els = trimmedLine.split("-");
         let paramInfo = {};
         if(els.length > 1){
-          paramInfo.desc = els[1];
+          let match = els[1].trim().match(/\(.*?\)/);
+          if(match && match.index == 0){
+            let text = match[0].substr(1, match[0].length-2);
+            if(text == "optional"){
+              paramInfo.optional = true;
+            }
+            else if(text == "exclude"){
+              exclude = true;
+            }
+
+            paramInfo.desc = els[1].replace(match[0], "").trim();
+          }
+          //add the description
+          else{
+            paramInfo.desc = els[1];
+          }
         }
 
-        let rightSide = trimmedLine.split("}")[1];
-        paramInfo.name = rightSide.split("-")[0].trim();
-        //find the param type
-        let match = trimmedLine.match(/\{.*?\}/);
-        if(match){
-          let paramType = match[0].substr(1,match[0].length-2);
-          paramInfo.types = paramType.split("|");
+        if(exclude == false){
+          let rightSide = trimmedLine.split("}")[1];
+          paramInfo.name = rightSide.split("-")[0].trim();
+          //find the param type
+          let match = trimmedLine.match(/\{.*?\}/);
+          if(match){
+            let paramType = match[0].substr(1,match[0].length-2);
+            paramInfo.types = paramType.split("|");
 
-          if(!info[key]){
-            info[key] = [];
+            if(!info[key]){
+              info[key] = [];
+            }
+            info[key].push(paramInfo);
           }
-          info[key].push(paramInfo);
         }
       }
 
