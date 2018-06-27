@@ -6,6 +6,8 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
     return console.log(err);
   }
 
+  //should remove comments here, incase there is a curly bracket in a comment
+
   let docs = [];
   let lines = data.split("\n");
   let opened = false;
@@ -22,20 +24,23 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
     else if(opened && lines[i].indexOf("*/") > -1){
       let res = parseContent(content);
       if(Object.keys(res).length > 0){
-        if(res.type != "overview"){
+        if(!res.type || res.type != "overview"){
           //find the next line that is not empty
           //get the signature from the found line
           let foundNextLine = false;
           while(i<lines.length && !foundNextLine){
             i++;
             if(lines[i].search(/\S/) > -1){
-              res.signature = parseCodeLine(lines[i]);
+              let signature = parseCodeLine(lines[i]);
+              for(let a in signature){
+                res[a] = signature[a];
+              }
               foundNextLine = true;
             }
           }
 
 
-          if(res.signature.type == "class"){
+          if(res.type == "class"){
             inClassScope = true;
             reachedFirstBracket = false;
             currentClass = res;
@@ -43,7 +48,7 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
             bracketCount = 0;
           }
 
-          else if(res.signature.type == "function"){
+          else if(res.type == "function"){
             //add if just a stray function
             if(!inClassScope){
               docs.push(res);
