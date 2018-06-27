@@ -92,6 +92,7 @@ function parse(filename){
                 reachedFirstBracket = false;
                 currentClass = res;
                 delete currentClass.params;
+                delete currentClass.isStatic;
                 currentClass.funcs = [];
                 bracketCount = 0;
               }
@@ -192,6 +193,7 @@ function parseCodeLine(line){
   }
   else{
     signature.type = "class";
+    signature.super = "";
   }
 
   //class line
