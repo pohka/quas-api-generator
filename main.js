@@ -1,118 +1,164 @@
-
-
 const fs = require('fs');
-fs.readFile("./docs/quas.js", "utf8", function(err,data){
-  if(err){
-    return console.log(err);
+
+let folder = "./docs/";
+let allDocs;
+let fileCount = 0;
+console.log("--------------------------");
+//read all files in directory
+fs.readdir(folder, (err, files) => {
+  files.forEach(filename => {
+    fileCount += 1;
+    console.log("parsing: " + folder+filename);
+    parse(folder+filename).then((data) =>{
+      appendAllDocs(data);
+      fileCount -= 1;
+      if(fileCount == 0){
+        output(allDocs);
+      }
+    });
+  });
+});
+
+//append the data parsed form the file to the allDocs
+function appendAllDocs(data){
+  if(!allDocs){
+    allDocs = data;
+    return;
   }
-
-  //should remove comments here, incase there is a curly bracket in a comment
-
-  let docs = [];
-  let lines = data.split("\n");
-  let opened = false;
-  let content = "";
-  let inClassScope = false;
-  let bracketCount = 0;
-  let reachedFirstBracket = false;
-  let currentClass;
-  let all = {};
-
-  for(let i=0; i<lines.length; i++){
-    if(lines[i].indexOf("/**") > -1){
-      opened = true;
+  for(let i in data){
+    if(i != "docs"){
+      allDocs[i] = data[i];
     }
-    else if(opened && lines[i].indexOf("*/") > -1){
-      let res = parseContent(content);
-      if(res.type && res.type == "overview"){
-        all = parseOverview(content);
+    else{
+      for(let a in data[i]){
+        allDocs[i].push(data[i][a]);
       }
-      if(Object.keys(res).length > 0){
-        if(!res.type || res.type != "overview"){
-          //find the next line that is not empty
-          //get the signature from the found line
-          let foundNextLine = false;
-          while(i<lines.length && !foundNextLine){
-            i++;
-            if(lines[i].search(/\S/) > -1){
-              let signature = parseCodeLine(lines[i]);
-              for(let a in signature){
-                res[a] = signature[a];
+    }
+  }
+}
+
+//parse a file
+function parse(filename){
+  return new Promise(function(resolve, reject) {
+    fs.readFile(filename, "utf8", function(err,data){
+     if(err){
+       return console.log(err);
+      }
+
+      //should remove comments here, incase there is a curly bracket in a comment
+
+      let docs = [];
+      let lines = data.split("\n");
+      let opened = false;
+      let content = "";
+      let inClassScope = false;
+      let bracketCount = 0;
+      let reachedFirstBracket = false;
+      let currentClass;
+      let all = {};
+
+      for(let i=0; i<lines.length; i++){
+        if(lines[i].indexOf("/**") > -1){
+          opened = true;
+        }
+        else if(opened && lines[i].indexOf("*/") > -1){
+          let res = parseContent(content);
+          if(res.type && res.type == "overview"){
+            all = parseOverview(content);
+          }
+          if(Object.keys(res).length > 0){
+            if(!res.type || res.type != "overview"){
+              //find the next line that is not empty
+              //get the signature from the found line
+              let foundNextLine = false;
+              while(i<lines.length && !foundNextLine){
+                i++;
+                if(lines[i].search(/\S/) > -1){
+                  let signature = parseCodeLine(lines[i]);
+                  for(let a in signature){
+                    res[a] = signature[a];
+                  }
+                  foundNextLine = true;
+                }
               }
-              foundNextLine = true;
+
+
+              if(res.type == "class"){
+                inClassScope = true;
+                reachedFirstBracket = false;
+                currentClass = res;
+                currentClass.funcs = [];
+                bracketCount = 0;
+              }
+
+              else if(res.type == "function"){
+                //add if just a stray function
+                if(!inClassScope){
+                  docs.push(res);
+                }
+                //add function to class
+                else{
+                  currentClass.funcs.push(res);
+                }
+              }
             }
           }
-
-
-          if(res.type == "class"){
-            inClassScope = true;
-            reachedFirstBracket = false;
-            currentClass = res;
-            currentClass.funcs = [];
-            bracketCount = 0;
+          opened = false;
+          content = "";
+        }
+        else if(opened){
+          if(content == ""){
+            content += lines[i];
           }
+          else{
+            content += "\n" + lines[i];
+          }
+        }
 
-          else if(res.type == "function"){
-            //add if just a stray function
-            if(!inClassScope){
-              docs.push(res);
+        //outside code block
+        if(!opened){
+          //in the scope of a class
+          if(inClassScope){
+            //this line has the opening bracket of the class
+            if(!reachedFirstBracket){
+              if(lines[i].indexOf("{") > -1){
+                reachedFirstBracket = true;
+              }
             }
-            //add function to class
-            else{
-              currentClass.funcs.push(res);
+            //count and update the current number of brackets
+            let openBrackets = lines[i].match(/{/g);
+            let closeBrackets = lines[i].match(/}/g);
+            if(openBrackets != null){
+              bracketCount += openBrackets.length;
+            }
+            if(closeBrackets != null){
+              bracketCount += -closeBrackets.length;
+            }
+            //if scope of class has closed
+            if(reachedFirstBracket && bracketCount <= 0){
+              docs.push(currentClass);
+              inClassScope = false;
             }
           }
         }
-      }
-      opened = false;
-      content = "";
-    }
-    else if(opened){
-      if(content == ""){
-        content += lines[i];
-      }
-      else{
-        content += "\n" + lines[i];
-      }
-    }
 
-    //outside code block
-    if(!opened){
-      //in the scope of a class
-      if(inClassScope){
-        //this line has the opening bracket of the class
-        if(!reachedFirstBracket){
-          if(lines[i].indexOf("{") > -1){
-            reachedFirstBracket = true;
-          }
-        }
-        //count and update the current number of brackets
-        let openBrackets = lines[i].match(/{/g);
-        let closeBrackets = lines[i].match(/}/g);
-        if(openBrackets != null){
-          bracketCount += openBrackets.length;
-        }
-        if(closeBrackets != null){
-          bracketCount += -closeBrackets.length;
-        }
-        //if scope of class has closed
-        if(reachedFirstBracket && bracketCount <= 0){
-          docs.push(currentClass);
-          inClassScope = false;
-        }
-      }
-    }
+      }//end of loop
 
-  }//end of loop
+      all.docs = docs;
+      resolve(all);
+    });
+  });
+}
 
-  all.docs = docs;
+//output the data
+function output(all){
   fs.writeFile("./output.json", JSON.stringify(all), function(err) {
     if(err) {
         return console.log(err);
     }
-    console.log("Documentation generated!");
+    console.log("\n--------------------------\nDocumentation generated!\n--------------------------");
   });
-});
+}
 
 function parseOverview(text){
   let obj = {};
