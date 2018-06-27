@@ -8,9 +8,12 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
 
   let docs = [];
   let lines = data.split("\n");
-  //console.log(lines);
   let opened = false;
   let content = "";
+  let inClassScope = false;
+  let bracketCount = 0;
+  let reachedFirstBracket = false;
+  let currentClass;
 
   for(let i=0; i<lines.length; i++){
     if(lines[i].indexOf("/**") > -1){
@@ -20,17 +23,37 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
       let res = parseContent(content);
       if(Object.keys(res).length > 0){
         if(res.type != "overview"){
+          //find the next line that is not empty
+          //get the signature from the found line
           let foundNextLine = false;
           while(i<lines.length && !foundNextLine){
             i++;
             if(lines[i].search(/\S/) > -1){
               res.signature = parseCodeLine(lines[i]);
-              //console.log(res.signature);
               foundNextLine = true;
             }
           }
+
+
+          if(res.signature.type == "class"){
+            inClassScope = true;
+            reachedFirstBracket = false;
+            currentClass = res;
+            currentClass.funcs = [];
+            bracketCount = 0;
+          }
+
+          else if(res.signature.type == "function"){
+            //add if just a stray function
+            if(!inClassScope){
+              docs.push(res);
+            }
+            //add function to class
+            else{
+              currentClass.funcs.push(res);
+            }
+          }
         }
-        docs.push(res);
       }
       opened = false;
       content = "";
@@ -43,14 +66,37 @@ fs.readFile("./docs/quas.js", "utf8", function(err,data){
         content += "\n" + lines[i];
       }
     }
-  }
 
-  for(let i=0; i<docs.length; i++){
-    if(docs[i].signature){
-      console.log(docs[i].signature);
+    //outside code block
+    if(!opened){
+      //in the scope of a class
+      if(inClassScope){
+        //this line has the opening bracket of the class
+        if(!reachedFirstBracket){
+          if(lines[i].indexOf("{") > -1){
+            reachedFirstBracket = true;
+          }
+        }
+        //count and update the current number of brackets
+        let openBrackets = lines[i].match(/{/g);
+        let closeBrackets = lines[i].match(/}/g);
+        if(openBrackets != null){
+          bracketCount += openBrackets.length;
+        }
+        if(closeBrackets != null){
+          bracketCount += -closeBrackets.length;
+        }
+        //if scope of class has closed
+        if(reachedFirstBracket && bracketCount <= 0){
+          docs.push(currentClass);
+          inClassScope = false;
+        }
+      }
     }
-  }
-//  console.log(docs);
+
+  }//end of loop
+
+  console.log(docs);
 });
 
 function parseCodeLine(line){
