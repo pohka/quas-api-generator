@@ -41,6 +41,25 @@ function appendAllDocs(data){
   }
 }
 
+//converts /modules/my-module.js to MyModule
+function moduleFileNameToTitleCase(path){
+  //get last string after /
+  let arr = path.split("/");
+  let moduleFileName = arr[arr.length-1];
+
+  //remove extension(s)
+  moduleFileName = moduleFileName.split(".")[0];
+
+  //convert to title case per word
+  let words = moduleFileName.split("-");
+  let res = "";
+  for(let i=0; i<words.length; i++){
+    res += words[i].charAt(0).toUpperCase() + words[i].substr(1);
+  }
+
+  return res;
+}
+
 //parse a file
 function parse(filename){
   return new Promise(function(resolve, reject) {
@@ -60,6 +79,7 @@ function parse(filename){
       let reachedFirstBracket = false;
       let currentClass;
       let all = {};
+      let ignoreCodeLineType = ["overview"];
 
       for(let i=0; i<lines.length; i++){
         if(lines[i].indexOf("/**") > -1){
@@ -70,8 +90,20 @@ function parse(filename){
           if(res.type && res.type == "overview"){
             all = parseOverview(content);
           }
+          else if(res.type && res.type == "module"){
+            /*
+            let moduleName = moduleFileNameToTitleCase(filename);
+            currentClass = {
+              type : res.type,
+              desc : content,
+              name : moduleName,
+            }
+            */
+          //  console.log(res);
+
+          }
           if(Object.keys(res).length > 0){
-            if(!res.type || res.type != "overview"){
+            if(!res.type || ignoreCodeLineType.indexOf(res.type) == -1){
               //find the next line that is not empty
               //get the signature from the found line
               let foundNextLine = false;
@@ -93,6 +125,20 @@ function parse(filename){
                 currentClass = res;
                 delete currentClass.params;
                 delete currentClass.isStatic;
+                delete currentClass.return;
+                currentClass.funcs = [];
+                bracketCount = 0;
+              }
+
+              else if(res.type == "module"){
+                inClassScope = true;
+                reachedFirstBracket = false;
+                currentClass = res;
+                res.name = moduleFileNameToTitleCase(filename);
+                delete currentClass.params;
+                delete currentClass.isStatic;
+                delete currentClass.return;
+                //delete currentClass.props;
                 delete currentClass.return;
                 currentClass.funcs = [];
                 bracketCount = 0;
@@ -189,8 +235,12 @@ function parseCodeLine(line){
     name : "",
     isStatic : false
   };
-  if(line.indexOf("(") > -1){
+  if(line.match(/export\s+\(|export\(/)){
+    signature.type = "module";
+  }
+  else if(line.indexOf("(") > -1){
     signature.type = "function";
+    return signature;
   }
   else{
     signature.type = "class";
@@ -212,7 +262,7 @@ function parseCodeLine(line){
   }
 
   //function line
-  else{
+  else if(signature.type == "function"){
     let hasMatch = false;
 
     /*
