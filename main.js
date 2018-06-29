@@ -402,6 +402,9 @@ function parseContent(text){
             paramInfo.desc = els[1];
           }
         }
+        else{
+          paramInfo.desc = "";
+        }
 
         if(exclude == false){
           let rightSide = trimmedLine.split("}")[1];
