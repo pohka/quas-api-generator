@@ -90,7 +90,7 @@ function parse(filename){
           if(res.type && res.type == "overview"){
             all = parseOverview(content);
           }
-          else if(res.type && res.type == "module"){
+          //else if(res.type && res.type == "module"){
             /*
             let moduleName = moduleFileNameToTitleCase(filename);
             currentClass = {
@@ -101,7 +101,7 @@ function parse(filename){
             */
           //  console.log(res);
 
-          }
+          //}
           if(Object.keys(res).length > 0){
             if(!res.type || ignoreCodeLineType.indexOf(res.type) == -1){
               //find the next line that is not empty
@@ -138,7 +138,6 @@ function parse(filename){
                 delete currentClass.params;
                 delete currentClass.isStatic;
                 delete currentClass.return;
-                //delete currentClass.props;
                 delete currentClass.return;
                 currentClass.funcs = [];
                 bracketCount = 0;
@@ -240,7 +239,7 @@ function parseCodeLine(line){
   }
   else if(line.indexOf("(") > -1){
     signature.type = "function";
-    return signature;
+    //return signature;
   }
   else{
     signature.type = "class";
@@ -264,16 +263,18 @@ function parseCodeLine(line){
   //function line
   else if(signature.type == "function"){
     let hasMatch = false;
-
     /*
-    mathces:
-      function test(){}
-      test()
+    matches:
+      var test = () => {}
+      test : () => {}
     */
-    let match = line.match(/\S+\(|\S+\s+\(/);
-    if(match){
-      signature.name = match[0].split("(")[0].trim();
-      hasMatch = true;
+    if(!hasMatch){
+      if(line.indexOf("=>") > -1){
+        let leftSideWords = line.split(/=|:/)[0].trim().split(/\s+/);
+        signature.name = leftSideWords[leftSideWords.length-1];
+        signature.isStatic = true;
+        hasMatch = true;
+      }
     }
 
     /*
@@ -290,16 +291,17 @@ function parseCodeLine(line){
       }
     }
 
+
+
     /*
-    matches:
-      var test = () => {}
+    mathces:
+      function test(){}
+      test()
     */
     if(!hasMatch){
-      let index = line.indexOf("=");
-      if(index > -1){
-        let leftSide = line.substr(0, index);
-        let els = leftSide.split(/\s+/);
-        signature.name = els[els.length-1];
+      let match = line.match(/\S+\(|\S+\s+\(/);
+      if(match){
+        signature.name = match[0].split("(")[0].trim();
         hasMatch = true;
       }
     }
